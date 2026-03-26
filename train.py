@@ -101,6 +101,11 @@ def train(df: pd.DataFrame):
 
 
 if __name__ == "__main__":
+    if not os.path.exists(DATA_PATH):
+        print(f"[ERROR] データファイルが見つかりません: {DATA_PATH}")
+        print("collect.py を先に実行してください。")
+        sys.exit(0)  # exitコード0でエラー扱いしない
+
     print(f"データ読み込み: {DATA_PATH}")
     df = load_and_prepare(DATA_PATH)
     print(f"  レース数: {df['レースID'].nunique()}, 行数: {len(df)}")

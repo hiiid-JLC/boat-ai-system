@@ -28,7 +28,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; BoatAI/2.0)"}
 # ─────────────────────────────────────────
 # ネットワーク
 # ─────────────────────────────────────────
-def safe_request(url: str, timeout: int = 8) -> str | None:
+def safe_request(url: str, timeout: int = 30) -> str | None:
     try:
         res = requests.get(url, headers=HEADERS, timeout=timeout)
         res.raise_for_status()

@@ -209,7 +209,22 @@ with tab1:
         with st.spinner("データ取得中…"):
             df_r = get_data(jcd, rno)
         if df_r.empty:
-            st.markdown('<span class="err">❌ データ取得失敗。直前情報未公開の可能性があります。</span>', unsafe_allow_html=True)
+            st.markdown('<span class="err">❌ データ取得失敗。以下を確認してください。<br>・直前情報がまだ公開されていない（発走30分前ごろ公開）<br>・場コードまたはレース番号が間違っている<br>・公式サイトのHTML構造が変わった可能性あり</span>', unsafe_allow_html=True)
+            # デバッグ情報
+            import requests
+            from bs4 import BeautifulSoup
+            debug_url = f"https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno={rno}&jcd={jcd}"
+            try:
+                res = requests.get(debug_url, headers={"User-Agent":"Mozilla/5.0"}, timeout=8)
+                soup = BeautifulSoup(res.text, "lxml")
+                tds = soup.find_all("td")
+                sample = [td.text.strip()[:15] for td in tds if td.text.strip()][:30]
+                with st.expander("🔍 デバッグ情報（取得できたデータ）"):
+                    st.write(f"ステータス: {res.status_code}")
+                    st.write(f"tdセル数: {len(tds)}")
+                    st.write(f"サンプル: {sample}")
+            except Exception as e:
+                st.error(f"通信エラー: {e}")
         else:
             st.markdown(f'<span class="ok">✅ {VENUES[jcd]}場 第{rno}R データ取得完了</span>', unsafe_allow_html=True)
             df_r = predict_probs_model(df_r, model) if model else predict_probs_rule(df_r)

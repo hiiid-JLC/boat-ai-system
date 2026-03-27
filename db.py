@@ -39,8 +39,10 @@ MODEL_FILE = "model/model.pkl"
 # GitHub API ヘルパー
 # ─────────────────────────────────────────
 def _gh_headers(token: str) -> dict:
+    # 改行・スペース・非ASCII文字を除去（Secrets貼り付け時の混入対策）
+    clean_token = str(token).strip().encode("ascii", errors="ignore").decode("ascii")
     return {
-        "Authorization": f"token {token}",
+        "Authorization": f"token {clean_token}",
         "Accept": "application/vnd.github.v3+json",
     }
 
@@ -238,13 +240,16 @@ def merge_data(existing_csv: str | None, new_df: pd.DataFrame) -> pd.DataFrame:
 # ─────────────────────────────────────────
 def load_stats(token: str, repo: str) -> dict:
     """GitHub から統計JSONを取得"""
-    content, _ = gh_get_file(token, repo, STATS_FILE)
-    if content is None:
-        return {"history": [], "total_bet": 0, "total_return": 0, "hits": 0, "bets": 0}
+    _empty = {"history": [], "total_bet": 0, "total_return": 0, "hits": 0, "bets": 0}
+    if not token or not repo:
+        return _empty
     try:
+        content, _ = gh_get_file(token, repo, STATS_FILE)
+        if content is None:
+            return _empty
         return json.loads(content)
     except Exception:
-        return {"history": [], "total_bet": 0, "total_return": 0, "hits": 0, "bets": 0}
+        return _empty
 
 
 def save_stats(token: str, repo: str, stats: dict) -> bool:

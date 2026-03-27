@@ -62,6 +62,9 @@ def get_data(jcd: str, rno: str) -> pd.DataFrame:
     直前情報ページから6艇分のデータを取得。
     失敗時は空のDataFrameを返す。
     """
+    # rno・jcd を必ずゼロパディング（公式サイト要件）
+    rno = str(rno).zfill(2)
+    jcd = str(jcd).zfill(2)
     url = (
         f"https://www.boatrace.jp/owpc/pc/race/beforeinfo"
         f"?rno={rno}&jcd={jcd}"
@@ -75,16 +78,16 @@ def get_data(jcd: str, rno: str) -> pd.DataFrame:
 
     for row in soup.find_all("tr"):
         cols = row.find_all("td")
-        if len(cols) < 6:
+        if len(cols) < 4:
             continue
         try:
             tno = int(cols[0].text.strip())
             if not (1 <= tno <= 6):
                 continue
-            # 展示タイム・STを複数候補から探す
+            # 全カラムから展示タイム(6.0〜8.0)・ST(-0.1〜0.5)を探す
             ex_time = st_val = None
-            for ci in range(2, min(len(cols), 9)):
-                txt = cols[ci].text.strip().replace("\n", "")
+            for ci in range(1, len(cols)):
+                txt = cols[ci].text.strip().replace("\n", "").replace(" ", "")
                 try:
                     val = float(txt)
                     if 6.0 < val < 8.0 and ex_time is None:
@@ -93,8 +96,13 @@ def get_data(jcd: str, rno: str) -> pd.DataFrame:
                         st_val = val
                 except ValueError:
                     pass
-            if ex_time is not None and st_val is not None:
-                boats.append({"艇番": tno, "展示タイム": ex_time, "ST": st_val})
+            # 展示タイムだけあれば登録（STは後で補完）
+            if ex_time is not None:
+                boats.append({
+                    "艇番": tno,
+                    "展示タイム": ex_time,
+                    "ST": st_val if st_val is not None else 0.15,  # ST未公開時はデフォルト
+                })
         except Exception:
             continue
 
@@ -123,6 +131,8 @@ def get_odds(jcd: str, rno: str) -> dict:
     """
     3連単オッズを取得。失敗時は空dictを返す。
     """
+    rno = str(rno).zfill(2)
+    jcd = str(jcd).zfill(2)
     url = (
         f"https://www.boatrace.jp/owpc/pc/race/odds3t"
         f"?rno={rno}&jcd={jcd}"
